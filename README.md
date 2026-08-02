@@ -36,8 +36,7 @@ drag `Momentary.app` into `/Applications`, and launch it.
 Or with Homebrew:
 
 ```sh
-brew tap dennistimmermann/tap
-brew install --cask momentary
+brew install --cask dennistimmermann/tap/momentary
 ```
 
 Momentary asks for **Accessibility** permission. It needs it to send the key a tapped modifier is
