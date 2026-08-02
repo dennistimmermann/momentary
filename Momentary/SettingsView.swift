@@ -39,7 +39,18 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
 
-            if state.secureInputActive { secureInputNotice }
+            if state.secureInputActive {
+                infoBox("Paused — another app has secure input on, so no key press reaches Momentary. It resumes on its own when that app lets go.",
+                        symbol: "lock")
+            }
+            // Both containers. Nothing lives in only one of them: the menu bar item is on by
+            // default, so a window-only offer would never be seen on a default install.
+            if state.offersLaunchAtLogin {
+                infoBox("Momentary is running. Allow it to automatically launch after a restart?",
+                        symbol: "power", tint: .blue,
+                        actions: [("Launch at login", state.acceptLaunchAtLogin),
+                                  ("Not now", state.declineLaunchAtLogin)])
+            }
 
             if state.hasPermission {
                 rulesSection
@@ -73,25 +84,6 @@ struct SettingsView: View {
         }
         .padding(.top, 4)
         .padding(.horizontal, 9)
-        .padding(.bottom, 6)
-    }
-
-    /// Says the one thing the app cannot fix and would otherwise hide: while another app holds
-    /// secure input, no event reaches any tap, so every rule is off until that app gives it up.
-    private var secureInputNotice: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: "lock")
-                .font(.system(size: 11))
-                .padding(.top, 1)
-            Text("Paused — another app has secure input on, so no key press reaches Momentary. It resumes on its own when that app lets go.")
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
-        .padding(8)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
-        .padding(.horizontal, 3)
         .padding(.bottom, 6)
     }
 
@@ -292,6 +284,50 @@ struct SettingsView: View {
     }
 
     // MARK: - Shared furniture
+
+    /// The one notice shape in the app: a symbol, a sentence, and any number of choices as links
+    /// beneath it. No tint is the grey wash for a state that heals itself; a tint means the app is
+    /// waiting on you, and spends the only colour on the panel.
+    ///
+    /// The actions sit on their own line rather than running on as the last words of the sentence,
+    /// because that is the only shape that also works for two of them — and one slightly plainer
+    /// box beats two that look almost alike.
+    private func infoBox(_ text: String, symbol: String, tint: Color? = nil,
+                         actions: [(String, () -> Void)] = []) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: symbol)
+                .font(.system(size: 11))
+                // Nudged onto the first line's cap height; the symbol's own box sits high.
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(text)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if !actions.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(Array(actions.enumerated()), id: \.offset) { index, action in
+                            if index > 0 { Text("·").foregroundStyle(.tertiary) }
+                            Button(action.0, action: action.1)
+                                .buttonStyle(.link)
+                                // Explicit: a tinted box sets the text to .primary so it reads on
+                                // the tint, and that would swallow the link style's own colour.
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(tint == nil ? .secondary : .primary)
+        .padding(8)
+        .background(tint.map { AnyShapeStyle($0.opacity(0.22)) } ?? AnyShapeStyle(.quaternary.opacity(0.5)),
+                    in: RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 3)
+        .padding(.bottom, 6)
+    }
 
     private var separator: some View {
         Divider().padding(.vertical, 7).padding(.horizontal, 9)

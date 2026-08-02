@@ -115,6 +115,17 @@ final class AppState: ObservableObject {
             // try? on purpose: a failed (un)register is not worth a UI error path.
             if launchAtLogin { try? SMAppService.mainApp.register() }
             else { try? SMAppService.mainApp.unregister() }
+            // Setting this by hand answers the offer's question, so the box goes away rather than
+            // sitting there asking about a switch you just used. Safe in `init`, which assigns the
+            // stored property directly and so never runs this.
+            //
+            // Only if it took, though. `try?` above swallows a failed `register()` — a still
+            // translocated first run, or an MDM policy — and the offer is asked exactly once, so
+            // latching it on a registration that silently did nothing would hide the very thing it
+            // exists to prevent. The test is the same `== .enabled` that opened the offer, so the
+            // two cannot disagree: any status that would not have suppressed the offer does not
+            // close it either, and a `.requiresApproval` result rightly asks again next launch.
+            if SMAppService.mainApp.status == .enabled { closeLaunchAtLoginOffer() }
         }
     }
 
@@ -148,6 +159,14 @@ final class AppState: ObservableObject {
     /// rather than appear healthy and do nothing.
     @Published private(set) var secureInputActive = false
 
+    /// Whether to offer starting at login. Momentary is headless, so a user who never turns this
+    /// on gets their rules silently back to nothing after a restart, with no window or Dock icon to
+    /// explain why — which is a worse surprise than being asked once.
+    ///
+    /// Asked once and then never again, whichever way it is answered. Never asked at all if the
+    /// login item is already registered, so reinstalls and upgrades stay quiet.
+    @Published private(set) var offersLaunchAtLogin = false
+
     /// Whether the cog is open. Lives here rather than in the view so it survives the panel
     /// closing and is shared with the window — the two containers are one settings surface and
     /// should not disagree about it. Deliberately *not* persisted: a fresh launch starts closed,
@@ -167,7 +186,7 @@ final class AppState: ObservableObject {
         static let excludedApps = "excludedApps"
         static let showsMenuBarItem = "showsMenuBarItem"
         static let didRequestAccess = "didRequestAccess"
-        static let didLaunchBefore = "didLaunchBefore"
+        static let didOfferLaunchAtLogin = "didOfferLaunchAtLogin"
     }
 
     private let defaults = UserDefaults.standard
@@ -216,7 +235,11 @@ final class AppState: ObservableObject {
         // `object(forKey:)` — `bool(forKey:)` reads a missing key as false, which would
         // hand the choice back every launch.
         showsMenuBarItem = defaults.object(forKey: Key.showsMenuBarItem) as? Bool ?? true
-        launchAtLogin = SMAppService.mainApp.status == .enabled
+        // Via a local, not by reading `launchAtLogin` back: touching a property with observers
+        // needs `self` fully initialized, and `rules` is not set until below.
+        let alreadyRegistered = SMAppService.mainApp.status == .enabled
+        launchAtLogin = alreadyRegistered
+        offersLaunchAtLogin = !defaults.bool(forKey: Key.didOfferLaunchAtLogin) && !alreadyRegistered
 
         // Nil, not empty: turning every rule off is a choice, and must not read as a
         // fresh install that gets ⌘ → ⎋ handed back on the next launch.
@@ -262,7 +285,12 @@ final class AppState: ObservableObject {
     // login — exactly when a headless app should show nothing — and `openWindow` is
     // unreachable from the delegate that handles a relaunch.
 
+    /// **Never opens while the menu bar item is on.** The item is the app's presence and its
+    /// panel is the settings; a window alongside it is a second copy of the same thing. Every
+    /// caller goes through here, so the rule holds however the request arrives — a relaunch, or
+    /// the item being switched off. (Launching is not a caller: it opens nothing at all.)
     func showSettings() {
+        guard !showsMenuBarItem else { return }
         show(&settingsWindow, title: "Momentary") { SettingsView(inWindow: true) }
     }
 
@@ -329,6 +357,16 @@ final class AppState: ObservableObject {
     func binding<T: Equatable>(_ keyPath: ReferenceWritableKeyPath<AppState, T>) -> Binding<T> {
         Binding(get: { self[keyPath: keyPath] },
                 set: { if self[keyPath: keyPath] != $0 { self[keyPath: keyPath] = $0 } })
+    }
+
+    /// The offer closes in `launchAtLogin`'s `didSet`, which fires on any set — including this one.
+    func acceptLaunchAtLogin() { launchAtLogin = true }
+
+    func declineLaunchAtLogin() { closeLaunchAtLoginOffer() }
+
+    private func closeLaunchAtLoginOffer() {
+        defaults.set(true, forKey: Key.didOfferLaunchAtLogin)
+        offersLaunchAtLogin = false
     }
 
     func setRule(_ key: ModifierKey, to output: TapOutput?) {

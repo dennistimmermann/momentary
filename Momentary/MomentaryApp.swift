@@ -71,16 +71,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Touching the singleton is what starts the tap and installs the status item,
-        // whether or not anything is ever shown.
-        let state = AppState.shared
-
-        // A first launch that shows nothing is indistinguishable from one that failed,
-        // so the first one introduces itself.
-        let defaults = UserDefaults.standard
-        if !defaults.bool(forKey: "didLaunchBefore") {
-            defaults.set(true, forKey: "didLaunchBefore")
-            state.showSettings()
-        }
+        // whether or not anything is ever shown. That is the whole of launching.
+        //
+        // Nothing is opened here. A first run always has the menu bar item on — it defaults on,
+        // and a first run is exactly when nobody has turned it off — so `showSettings` could only
+        // ever hit its own guard and do nothing. The status item is the app's arrival.
+        _ = AppState.shared
     }
 
     /// Launching Momentary while it is already running is the way back in. Launch
