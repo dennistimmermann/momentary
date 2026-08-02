@@ -123,10 +123,13 @@ section { padding-bottom: 38px; }
 }
 .download:hover { background: #fff; color: var(--ground); }
 
+/* nowrap, not wrap: the command is one line of shell and reads as one. Letting it wrap doubles
+   this box's height and — since the row stretches — the Download button's with it, which is what
+   made both look enormous. Too narrow to fit, it scrolls inside itself instead. */
 .command {
   flex: 1; min-width: 260px; display: flex; align-items: center; gap: 9px;
   background: var(--panel); border-radius: 6px; padding: 13px 18px;
-  color: var(--ink); font-size: 13px; overflow-x: auto;
+  color: var(--ink); font-size: 13px; overflow-x: auto; white-space: nowrap;
 }
 .command .prompt { color: var(--muted); }   /* not amber — amber is spoken for */
 
@@ -180,6 +183,33 @@ section { padding-bottom: 38px; }
 .highlights p { margin: 0 0 16px; break-inside: avoid; }
 .highlights b { color: var(--ink); font-weight: 500; }
 
+/* ---------- also ----------
+   A quiet cross-link, not a second hero. It borrows the page's own vocabulary — panel fill,
+   hairline, muted arrow — and takes none of its colour: no amber, because amber follows the tap
+   and nothing else, and no app icon, because the settings panel is the one light object here.
+   The whole card is the link, so there is no button competing with Download further up. */
+
+.also {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 20px 22px;
+}
+.also:hover { border-color: rgba(244, 242, 238, 0.2); }
+
+.also-title { display: block; font-size: 14px; color: var(--ink); }
+.also-title em { font-style: normal; color: var(--muted); }   /* the dash, set back a step */
+
+.also-body {
+  display: block; margin-top: 7px;
+  font-size: 12.5px; color: var(--body); max-width: 58ch;
+}
+
+/* Says where the card goes: it leaves the site, and an underlined title would not say that. */
+.also-go { display: block; margin-top: 14px; font-size: 11px; color: var(--muted); }
+.also:hover .also-go { color: var(--body); }
+
 /* ---------- footer ---------- */
 
 footer {
@@ -191,6 +221,15 @@ footer {
 @media (max-width: 640px) {
   nav .who { display: none; }
   header { padding: 44px 0 34px; }
+  /* Stacked, both full width — at this size the command needs the whole line to show without
+     scrolling, and it is the thing most people copy.
+     `flex-wrap: nowrap` is load-bearing: a *wrapping* column flex container sizes its line to the
+     items' own widths instead of the container's, so the command would keep its full one-line
+     width, refuse to stretch down, and take the page's horizontal scrollbar with it. With the
+     column unwrapped the items stretch to the page and the command scrolls inside itself. */
+  .install { flex-direction: column; flex-wrap: nowrap; }
+  .download { justify-content: center; }
+  .command { min-width: 0; }
   .set { grid-template-columns: 1fr; gap: 24px; }
   .highlights { columns: 1; }
   .trace-row, .threshold-tick { grid-template-columns: 36px 1fr 62px; gap: 12px; }
