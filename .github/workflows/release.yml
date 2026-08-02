@@ -1,0 +1,203 @@
+name: Release
+
+# Tag a commit `v1.2.3` and push the tag -> builds Momentary 1.2.3 and attaches
+# the zipped app to a GitHub release of that tag.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # macOS renders apps linked against an older SDK in the previous appearance
+    # (square corners, opaque panels), so the runner's SDK has to be current.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26 if present
+        run: |
+          # Prefer the toolchain the app is developed with; fall back to the image default.
+          latest=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$latest" ]; then sudo xcode-select -s "$latest"; fi
+          xcodebuild -version
+          echo "SDK: $(xcrun --show-sdk-version)"
+
+      # The Developer ID certificate lives in the repo secrets as a base64'd .p12.
+      # It goes into a throwaway keychain that dies with the runner.
+      - name: Import signing certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
+          CERT_P12_PASSWORD: ${{ secrets.CERT_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$CERT_P12_BASE64" | base64 --decode > cert.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import cert.p12 -k build.keychain -P "$CERT_P12_PASSWORD" -T /usr/bin/codesign
+          # Without this, codesign blocks on a GUI prompt for the private key.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security list-keychains -d user -s build.keychain login.keychain-db
+          rm cert.p12
+          security find-identity -v -p codesigning build.keychain
+
+      # `archive` + `exportArchive`, not `build`: it signs nested code (Sparkle.framework
+      # embeds Autoupdate.app and Updater.app) inside-out with the hardened runtime and a
+      # secure timestamp, both of which the notary service requires.
+      - name: Archive (version from tag)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Sparkle picks the newer update by CFBundleVersion, so derive it from the tag
+          # instead of the run number: 0.1.2 -> 102, 1.2.3 -> 10203, always monotonic.
+          BUILD=$(echo "$VERSION" | awk -F. '{print $1*10000 + $2*100 + $3}')
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          xcodebuild -project Momentary.xcodeproj -scheme Momentary -configuration Release \
+            -archivePath build/Momentary.xcarchive \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM=N3BEDTWSK4 \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
+            archive
+
+      - name: Export signed app
+        run: |
+          cat > ExportOptions.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>developer-id</string>
+            <key>teamID</key><string>N3BEDTWSK4</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Developer ID Application</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/Momentary.xcarchive \
+            -exportOptionsPlist ExportOptions.plist -exportPath export
+          codesign -dvvv export/Momentary.app
+
+      # The notarization ticket staples into the .app, so the release zip has to
+      # be built after stapling — hence zipping twice.
+      - name: Notarize and staple
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          APP=export/Momentary.app
+          ditto -c -k --keepParent "$APP" notarize.zip
+          # `submit --wait` exits non-zero when the result is Invalid, so capture the
+          # id first and always print the notary log — it names the rejection reason.
+          xcrun notarytool submit notarize.zip --wait --output-format json \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id N3BEDTWSK4 \
+            > notary.json || true
+          cat notary.json
+          xcrun notarytool log "$(jq -r .id notary.json)" \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id N3BEDTWSK4
+          test "$(jq -r .status notary.json)" = Accepted
+          xcrun stapler staple "$APP"
+          ditto -c -k --keepParent "$APP" Momentary.zip
+          spctl -a -vvv -t exec "$APP"
+
+      # The dmg is the first-install download: its drag-to-Applications window puts
+      # the app where Sparkle can update it (an app launched straight from an
+      # unzipped ~/Downloads runs translocated and can't update itself). The zip
+      # stays too — it is the appcast enclosure, Sparkle's recommended format.
+      - name: Build dmg
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          # dmgbuild, not create-dmg: it writes the Finder layout (.DS_Store)
+          # directly instead of scripting Finder, whose AppleScript fails
+          # silently on headless runners. Layout lives in dmg-settings.py.
+          python3 -m venv dmgenv
+          dmgenv/bin/pip -q install dmgbuild
+          dmgenv/bin/dmgbuild -s dmg-settings.py Momentary Momentary.dmg
+          codesign --sign "Developer ID Application" --timestamp Momentary.dmg
+          # The app inside is already notarized and stapled; this notarizes the
+          # image itself. A failure here would be new, so the zip step's log
+          # plumbing isn't repeated — the non-zero exit is enough.
+          xcrun notarytool submit Momentary.dmg --wait \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id N3BEDTWSK4
+          xcrun stapler staple Momentary.dmg
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # RELEASE_NOTES.md, not --generate-notes: this body is what users read in
+        # Sparkle's update panel, and a list of commit subjects does not serve them.
+        run: gh release create "$GITHUB_REF_NAME" Momentary.zip Momentary.dmg --notes-file RELEASE_NOTES.md
+
+      # Sparkle's feed. `releases/latest/download/appcast.xml` always redirects to the
+      # newest release's copy, so the feed is a release asset and never needs a commit
+      # back to the repo. One <item> is a valid appcast; each release replaces the feed.
+      # Runs after the release exists because the notes are the release body.
+      - name: Publish appcast
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The release body is markdown and Sparkle renders HTML, so let GitHub convert
+          # it. Inlining the notes beats sparkle:releaseNotesLink pointing at the release
+          # page, which renders the whole GitHub page — navigation, footer and all —
+          # inside the update panel.
+          NOTES=$(gh release view "$GITHUB_REF_NAME" --json body -q .body)
+          HTML=$(gh api -X POST /markdown -f text="$NOTES")
+          # ponytail: no sparkle:edSignature — updates are validated against the
+          # Developer ID signature instead. Add SUPublicEDKey + sign_update if updates
+          # ever have to install with elevated privileges (Sparkle pre-validates those,
+          # and pre-validation needs an EdDSA key).
+          cat > appcast.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Momentary</title>
+              <item>
+                <title>$VERSION</title>
+                <pubDate>$(date "+%a, %d %b %Y %H:%M:%S %z")</pubDate>
+                <sparkle:version>$BUILD</sparkle:version>
+                <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <description><![CDATA[
+          $HTML
+          ]]></description>
+                <enclosure url="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/Momentary.zip"
+                           length="$(stat -f%z Momentary.zip)"
+                           type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          XML
+          cat appcast.xml
+          gh release upload "$GITHUB_REF_NAME" appcast.xml
+
+      # The cask lives in dennistimmermann/homebrew-tap, so `brew install --cask momentary`
+      # keeps handing out the previous version until it is bumped. Last, because a stale
+      # cask is only worth failing the run over once the release itself is complete.
+      # HOMEBREW_TAP_TOKEN is a fine-grained PAT scoped to that one repo, Contents: write.
+      - name: Check out the tap
+        uses: actions/checkout@v4
+        with:
+          repository: dennistimmermann/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Bump the Homebrew cask
+        working-directory: homebrew-tap
+        run: |
+          SHA=$(shasum -a 256 ../Momentary.dmg | cut -d' ' -f1)
+          sed -i '' -e "s|^  version .*|  version \"$VERSION\"|" \
+                    -e "s|^  sha256 .*|  sha256 \"$SHA\"|" Casks/momentary.rb
+          cat Casks/momentary.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Re-running the workflow for a tag already bumped leaves nothing to commit,
+          # which `git commit` treats as an error.
+          git diff --quiet || git commit -am "Update Momentary to $VERSION"
+          git push

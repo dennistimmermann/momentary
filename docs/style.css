@@ -1,0 +1,230 @@
+/* Momentary landing page — design 9a "Reference, dark".
+   Deliberately not Keychange: that page is a warm light "desk" with white panels, a blue
+   accent and a sans headline. This one is near-black, cream, monospace all the way down.
+
+   Colour is spent in two places and no others:
+     1. Amber follows the tap: the section labels, the tap bar, and what that bar sends. The
+        threshold is a plain white rule — it is a measurement, not part of the path, and
+        white keeps it legible across both bars without competing with them.
+     2. The panel is the only light object on the page, and the only place any other
+        colour appears (the system blue of its switches). */
+
+:root {
+  --ground: #1C1B19;        /* the app icon's ink, used as the page's ground */
+  --panel: #232220;
+  --ink: #F4F2EE;           /* the app icon's ink on a dark plate */
+  --body: #A8A39A;
+  --muted: #6F6A62;
+  --amber: #D9A82C;
+  --hairline: rgba(244, 242, 238, 0.09);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--body);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page { max-width: 660px; margin: 0 auto; padding: 0 26px 64px; }
+
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--ink); }
+
+/* ---------- top bar ---------- */
+
+nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 11.5px; color: var(--muted);
+}
+nav .who { color: var(--body); }
+nav .links { display: flex; gap: 18px; }
+
+/* ---------- wordmark + hero ---------- */
+
+header { padding: 60px 0 44px; }
+
+.wordmark { display: flex; align-items: center; gap: 11px; }
+.wordmark svg { display: block; }
+.wordmark span { font-size: 23px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
+
+h1 {
+  margin: 22px 0 0;
+  font-size: 14.5px; font-weight: 400; line-height: 1.7;
+  color: var(--body); max-width: 62ch;
+}
+h1 kbd { color: var(--ink); font: inherit; }
+
+/* ---------- section scaffolding ---------- */
+
+section { padding-bottom: 38px; }
+
+.label {
+  font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 16px;
+}
+
+/* ---------- how long is a tap ---------- */
+
+.trace { padding: 6px 0 4px; }
+
+.trace-row { display: grid; grid-template-columns: 48px 1fr 68px; align-items: center; gap: 18px; }
+.trace-row + .trace-row { margin-top: 16px; }
+.trace-row .who { color: var(--muted); font-size: 12px; }
+
+/* The rail is the full duration; the fill is how long the key was actually down. */
+.bar { position: relative; height: 11px; }
+.bar::before {
+  content: ""; position: absolute; inset: 4px 0;
+  background: rgba(244, 242, 238, 0.07); border-radius: 2px;
+}
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 5.5px; display: block; }
+.bar.tap i { width: 30%; background: var(--amber); }
+.bar.hold i { width: 74%; background: #4A4640; }
+
+/* The threshold, drawn on both rows so the two read as one continuous vertical. */
+.bar::after {
+  content: ""; position: absolute; top: -9px; bottom: -9px; left: 44%;
+  border-left: 1px solid var(--ink);
+}
+
+.trace-row .out { font-size: 13px; text-align: right; }
+.trace-row .out.sends { color: var(--amber); }
+.trace-row .out.keeps { color: var(--muted); }
+
+/* Shares the row grid so the caption sits under the threshold line exactly: 44% has to be
+   44% *of the bar column*, which is what the earlier margin-based guess got wrong. */
+.threshold-tick { display: grid; grid-template-columns: 48px 1fr 68px; gap: 18px; margin-top: 9px; }
+.threshold-tick i {
+  grid-column: 2; position: relative; display: block;
+  height: 1.2em; font-style: normal; font-size: 11px; color: var(--muted);
+}
+.threshold-tick i::before {
+  content: "threshold"; position: absolute; left: 44%;
+  transform: translateX(-50%); white-space: nowrap;
+}
+
+/* ---------- install ---------- */
+
+.install { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.download {
+  display: inline-flex; align-items: center;
+  background: var(--ink); color: var(--ground);
+  border-radius: 6px; padding: 13px 22px; font-size: 13px; white-space: nowrap;
+}
+.download:hover { background: #fff; color: var(--ground); }
+
+.command {
+  flex: 1; min-width: 260px; display: flex; align-items: center; gap: 9px;
+  background: var(--panel); border-radius: 6px; padding: 13px 18px;
+  color: var(--ink); font-size: 13px; overflow-x: auto;
+}
+.command .prompt { color: var(--muted); }   /* not amber — amber is spoken for */
+
+.meta { margin-top: 14px; font-size: 11px; color: var(--muted); }
+
+/* ---------- settings ---------- */
+
+.set { display: grid; grid-template-columns: minmax(0, 246px) 1fr; gap: 30px; align-items: start; }
+
+.pairs { font-size: 12.5px; }
+.pairs .pair { display: grid; grid-template-columns: 86px 1fr; gap: 14px; padding: 11px 0; }
+.pairs .pair + .pair { border-top: 1px solid var(--hairline); }
+.pairs dt { color: var(--ink); }
+.pairs dd { margin: 0; color: var(--body); }
+
+/* The panel: the only light object on the page, and the only other colour. */
+.panel {
+  background: #F2F1EE; color: #1D1D1F;
+  border-radius: 9px; padding: 9px 8px;
+  font-size: 10.5px; line-height: 1.5;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+.panel .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 6px; }
+.panel .ptitle { letter-spacing: 0.09em; font-size: 9px; color: #6B6862; }
+.panel .psection { color: #8A8781; font-size: 8.5px; letter-spacing: 0.1em; padding: 9px 6px 2px; }
+.panel .field {
+  min-width: 74px; text-align: center;
+  background: #fff; border: 1px solid rgba(0, 0, 0, 0.13);
+  border-radius: 4px; padding: 1px 8px;
+}
+.panel .disclose { color: #8A8781; padding: 3px 6px 1px; }
+.panel hr { border: 0; border-top: 1px solid rgba(0, 0, 0, 0.09); margin: 7px 4px; }
+
+.panel .switch { width: 25px; height: 14px; border-radius: 7px; background: #0A84FF; position: relative; flex: none; }
+.panel .switch::after {
+  content: ""; position: absolute; top: 2px; right: 2px;
+  width: 10px; height: 10px; border-radius: 50%; background: #fff;
+}
+.panel .slider { display: flex; align-items: center; gap: 7px; }
+.panel .track { width: 74px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.16); position: relative; }
+.panel .track::before { content: ""; position: absolute; inset: 0 62% 0 0; background: #0A84FF; border-radius: 2px; }
+.panel .track::after {
+  content: ""; position: absolute; top: -4px; left: 34%;
+  width: 11px; height: 11px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* ---------- highlights ---------- */
+
+.highlights { columns: 2; column-gap: 34px; font-size: 12.5px; }
+.highlights p { margin: 0 0 16px; break-inside: avoid; }
+.highlights b { color: var(--ink); font-weight: 500; }
+
+/* ---------- footer ---------- */
+
+footer {
+  border-top: 1px solid var(--hairline); padding-top: 22px;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  font-size: 11.5px; color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  nav .who { display: none; }
+  header { padding: 44px 0 34px; }
+  .set { grid-template-columns: 1fr; gap: 24px; }
+  .highlights { columns: 1; }
+  .trace-row, .threshold-tick { grid-template-columns: 36px 1fr 62px; gap: 12px; }
+}
+
+/* ---------- legal pages ----------
+   Impressum, privacy, terms. Long prose needs a measure and a surface; the rest of the
+   page is short blocks on the bare ground, which does not survive 40 lines of statute. */
+
+.legal { padding: 30px 0 20px; max-width: 620px; }
+
+.legal h1 {
+  font-size: 22px; font-weight: 500; letter-spacing: -0.01em;
+  color: var(--ink); margin: 0 0 4px;
+}
+.legal .sub { font-size: 11px; color: var(--muted); margin: 0 0 26px; }
+
+.legal h2 {
+  font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--amber); margin: 30px 0 10px;
+}
+
+.legal p, .legal li { font-size: 12.5px; line-height: 1.75; margin: 0 0 11px; }
+.legal ul { margin: 0 0 11px; padding-left: 18px; }
+.legal address { font-style: normal; font-size: 12.5px; line-height: 1.75; }
+.legal b { color: var(--ink); font-weight: 500; }
+.legal code {
+  font-size: 11.5px; background: var(--panel);
+  border-radius: 3px; padding: 1px 5px; color: var(--ink);
+}
+.legal a { border-bottom: 1px solid var(--hairline); }
+.legal a:hover { border-bottom-color: var(--ink); }
+
+/* Back link in place of the site nav's three links. */
+nav .back { color: var(--body); }
+
+.footer-legal { display: flex; flex-wrap: wrap; gap: 16px; }

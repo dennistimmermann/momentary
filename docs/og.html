@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Momentary — share card source</title>
+<!--
+  Source for og.png, the 1200×630 link-preview card. Not linked from anywhere; it exists
+  so the card can be regenerated instead of redrawn by hand:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+      --screenshot=og@2x.png --window-size=1200,630 --force-device-scale-factor=2 \
+      --hide-scrollbars docs/og.html
+    sips --resampleWidth 1200 og@2x.png --out og.png
+
+  It borrows style.css so the palette and type stay in step with the page; only the
+  card's own frame lives here. The trace is the card's whole right-hand side, because it
+  is the one thing that explains the product without being read.
+-->
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { margin: 0; }
+  body {
+    width: 1200px; height: 630px;
+    display: grid; grid-template-columns: 1fr 470px;
+    align-items: center; gap: 60px;
+    padding: 0 80px;
+    background: var(--ground);
+    overflow: hidden;
+  }
+
+  /* A link preview that never spells out the product's name is a wasted card. */
+  .brand { display: flex; align-items: center; gap: 18px; margin-bottom: 30px; }
+  .brand svg { display: block; }
+  .brand span { font-size: 38px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
+
+  h1 {
+    font-size: 46px; font-weight: 400; line-height: 1.25; letter-spacing: -0.01em;
+    color: var(--body); margin: 0; max-width: 15ch;
+  }
+  h1 kbd { color: var(--ink); font: inherit; }
+  .meta { font-size: 17px; color: var(--muted); margin: 34px 0 0; }
+
+  /* The trace at card scale — same structure as the page, bigger. */
+  .trace { padding: 0; }
+  .trace-row { grid-template-columns: 72px 1fr 108px; gap: 22px; }
+  .trace-row + .trace-row { margin-top: 30px; }
+  .trace-row .who { font-size: 19px; }
+  .bar { height: 18px; }
+  .bar::before { inset: 6px 0; border-radius: 3px; }
+  .bar i { border-radius: 9px; }
+  .bar::after { top: -14px; bottom: -14px; border-left-width: 2px; }
+  .trace-row .out { font-size: 20px; }
+  .threshold-tick { grid-template-columns: 72px 1fr 108px; gap: 22px; margin-top: 18px; }
+  .threshold-tick i { font-size: 17px; height: 1.2em; }
+</style>
+</head>
+<body>
+
+  <div>
+    <div class="brand">
+      <svg width="42" height="42" viewBox="0 0 100 100" aria-hidden="true">
+        <rect x="27" y="30" width="17" height="40" rx="8.5" fill="#F4F2EE"/>
+        <rect x="56" y="12" width="17" height="76" rx="8.5" fill="#F4F2EE"/>
+      </svg>
+      <span>momentary</span>
+    </div>
+    <h1>Gives <kbd>⌃ ⌥ ⇧ ⌘</kbd> modifiers a second purpose.</h1>
+    <p class="meta">Tap for your own, hold for the original · free, MIT · macOS 14+</p>
+  </div>
+
+  <div class="trace">
+    <div class="trace-row">
+      <span class="who">tap</span>
+      <span class="bar tap"><i></i></span>
+      <span class="out sends">sends ⎋</span>
+    </div>
+    <div class="trace-row">
+      <span class="who">hold</span>
+      <span class="bar hold"><i></i></span>
+      <span class="out keeps">holds ⌘</span>
+    </div>
+    <div class="threshold-tick"><i></i></div>
+  </div>
+
+</body>
+</html>

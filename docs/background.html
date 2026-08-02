@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Momentary — dmg background source</title>
+<!--
+  Source for background.tiff, the 660×400 disk-image window background. Like og.html it
+  exists so the image can be regenerated instead of redrawn:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+      --screenshot=background@2x.png --window-size=660,400 \
+      --force-device-scale-factor=2 --hide-scrollbars docs/background.html
+    sips --resampleWidth 660 background@2x.png --out background.png
+    tiffutil -cathidpicheck background.png background@2x.png -out background.tiff
+
+  The icons are not in the image: the real Momentary.app sits centred at (165, 210) and
+  the Applications alias at (495, 210), both 128pt. Those are set in dmg-settings.py and
+  the arrow drawn here has to match them — if one moves, both move.
+
+  It borrows the site's style.css so the ground colour, the amber and the type stay in
+  step with everything else.
+-->
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { margin: 0; }
+  body {
+    position: relative;
+    width: 660px; height: 400px;
+    background: var(--ground);
+    overflow: hidden;
+  }
+
+  .wordmark {
+    position: absolute; top: 34px; left: 0; right: 0;
+    justify-content: center;
+    gap: 10px;
+  }
+  .wordmark span { font-size: 19px; }
+
+  /* Between the two 128pt icon wells: app centred at x=165, Applications at x=495, so the
+     gap runs 229…431 and its middle is 330. */
+  .arrow {
+    position: absolute; left: 229px; width: 202px; top: 196px;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--muted);
+  }
+  .arrow .line { flex: 1; height: 1px; background: rgba(244, 242, 238, 0.18); }
+  .arrow .head {
+    width: 0; height: 0; margin-left: -4px;
+    border-left: 7px solid rgba(244, 242, 238, 0.35);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  .caption {
+    position: absolute; left: 0; right: 0; top: 316px;
+    text-align: center;
+    font-size: 12px; color: var(--muted);
+  }
+  .caption b { color: var(--body); font-weight: 400; }
+</style>
+</head>
+<body>
+
+  <div class="wordmark">
+    <svg width="21" height="21" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="27" y="30" width="17" height="40" rx="8.5" fill="#F4F2EE"/>
+      <rect x="56" y="12" width="17" height="76" rx="8.5" fill="#F4F2EE"/>
+    </svg>
+    <span>momentary</span>
+  </div>
+
+  <div class="arrow"><span class="line"></span><span class="head"></span></div>
+
+  <div class="caption"><b>Drag Momentary into Applications.</b> It needs to live there to update itself.</div>
+
+</body>
+</html>
