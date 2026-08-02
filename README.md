@@ -12,6 +12,11 @@
   <a href="https://github.com/dennistimmermann/momentary/issues">Issues</a>
 </p>
 
+<p align="center">
+  <img src="docs/panel.png" width="420"
+       alt="Momentary's menu bar panel, opened out: a row for each of ⌃ ⌥ ⇧ ⌘ with the left and right side listed separately, both Command rows sending ⎋ and the rest empty; a hold threshold of 150 ms; Exclude App…; and switches for the menu bar item, launching at login and automatic updates.">
+</p>
+
 Tap ⌘ on its own and it sends Escape. Hold it, or use it with any other key, and it is the ⌘ it
 always was. Out of the box that is the only rule — on both ⌘ keys, because that is the one worth
 having on a keyboard with no physical Escape. Every modifier gets its own row, left and right told

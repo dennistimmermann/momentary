@@ -137,44 +137,59 @@ section { padding-bottom: 38px; }
 
 /* ---------- settings ---------- */
 
-.set { display: grid; grid-template-columns: minmax(0, 246px) 1fr; gap: 30px; align-items: start; }
+/* The panel keeps its real 420pt width — a screenshot shrunk below that stops being readable —
+   which leaves the rest of the 660px page for the list. That column is too narrow for a term and
+   its description side by side, so the description breaks onto its own line instead. */
+.set { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 26px; align-items: start; }
 
-.pairs { font-size: 12.5px; }
-.pairs .pair { display: grid; grid-template-columns: 86px 1fr; gap: 14px; padding: 11px 0; }
+/* margin: 0 kills the UA default on <dl>, which otherwise starts the list ~12px below the
+   panel it is supposed to line up with. It only became visible once the panel's shadow
+   stopped padding the top of the row. */
+.pairs { margin: 0; font-size: 12.5px; }
+.pairs .pair { padding: 10px 0; }
 .pairs .pair + .pair { border-top: 1px solid var(--hairline); }
 .pairs dt { color: var(--ink); }
-.pairs dd { margin: 0; color: var(--body); }
+.pairs dd { margin: 2px 0 0; color: var(--body); }
 
-/* The panel: the only light object on the page, and the only other colour. */
+/* Its own breakpoint, ahead of the page's. The panel does not shrink, so every pixel the page
+   loses comes out of the list — by 710px that column is down to ~128px and the descriptions
+   shred. Stack before it gets there rather than at the page's own 640. */
+@media (max-width: 710px) {
+  .set { grid-template-columns: 1fr; }
+  /* Stacked, the list has the whole page again — so the description goes back beside its term
+     instead of under it. The break is a response to the narrow column, not a preference. */
+  .pairs .pair { display: grid; grid-template-columns: 86px 1fr; gap: 14px; }
+  .pairs dd { margin: 0; }
+}
+
+
+/* The panel: a real 2x capture of the app (see CLAUDE.md for how to retake it), and the only
+   light object on the page. It brings its own drop shadow in the alpha channel, so nothing here
+   draws one — a CSS shadow on top would double it.
+
+   That shadow is transparent padding, so the file is bigger than the panel on every side and the
+   image lands inset from everything around it. `.panel-frame` is therefore the layout box, sized
+   to the panel body, and the image is blown up past it and pulled back by exactly the padding —
+   so the shadow overhangs without occupying a single pixel of layout. The body sits at 46,38 in a
+   932x1230 file; every number below is that measured, as a percentage of the body's width.
+
+   Percentages of the *width* on all four sides is not a slip: percentage margins resolve against
+   the containing block's inline size, top and bottom included. Since the image keeps the capture's
+   aspect ratio, the vertical padding is a fixed fraction of its width too, so it works out. And it
+   has to be percentages of a box pinned to the image's own size — an earlier attempt put them on
+   the image inside the grid area, where the container is wider than the capped image and the pull
+   came out ~9px too far. */
+/* `flow-root` is load-bearing: without a block formatting context the image's negative top margin
+   collapses straight through the frame and lifts the whole box ~19px above the row, putting the
+   panel out of line with the list beside it. It contains the margin without clipping the shadow,
+   which `overflow: hidden` would. */
+.panel-frame { display: flow-root; width: 100%; max-width: 420px; }   /* 420pt: the true size */
+
 .panel {
-  background: #F2F1EE; color: #1D1D1F;
-  border-radius: 9px; padding: 9px 8px;
-  font-size: 10.5px; line-height: 1.5;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
-}
-.panel .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 6px; }
-.panel .ptitle { letter-spacing: 0.09em; font-size: 9px; color: #6B6862; }
-.panel .psection { color: #8A8781; font-size: 8.5px; letter-spacing: 0.1em; padding: 9px 6px 2px; }
-.panel .field {
-  min-width: 74px; text-align: center;
-  background: #fff; border: 1px solid rgba(0, 0, 0, 0.13);
-  border-radius: 4px; padding: 1px 8px;
-}
-.panel .disclose { color: #8A8781; padding: 3px 6px 1px; }
-.panel hr { border: 0; border-top: 1px solid rgba(0, 0, 0, 0.09); margin: 7px 4px; }
-
-.panel .switch { width: 25px; height: 14px; border-radius: 7px; background: #0A84FF; position: relative; flex: none; }
-.panel .switch::after {
-  content: ""; position: absolute; top: 2px; right: 2px;
-  width: 10px; height: 10px; border-radius: 50%; background: #fff;
-}
-.panel .slider { display: flex; align-items: center; gap: 7px; }
-.panel .track { width: 74px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.16); position: relative; }
-.panel .track::before { content: ""; position: absolute; inset: 0 62% 0 0; background: #0A84FF; border-radius: 2px; }
-.panel .track::after {
-  content: ""; position: absolute; top: -4px; left: 34%;
-  width: 11px; height: 11px; border-radius: 50%; background: #fff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  display: block;
+  width: 110.9524%;
+  height: auto;
+  margin: -4.5238% -5.4762% -6.4286% -5.4762%;
 }
 
 /* ---------- highlights ---------- */
@@ -230,7 +245,6 @@ footer {
   .install { flex-direction: column; flex-wrap: nowrap; }
   .download { justify-content: center; }
   .command { min-width: 0; }
-  .set { grid-template-columns: 1fr; gap: 24px; }
   .highlights { columns: 1; }
   .trace-row, .threshold-tick { grid-template-columns: 36px 1fr 62px; gap: 12px; }
 }

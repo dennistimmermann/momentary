@@ -73,20 +73,14 @@
   <section>
     <div class="label">Settings</div>
     <div class="set">
-      <div class="panel" aria-hidden="true">
-        <div class="prow"><span class="ptitle">MOMENTARY</span><span class="switch"></span></div>
-        <div class="psection">WHEN TAPPED, SEND</div>
-        <div class="prow"><span>Left ⌘ Command</span><span class="field">⎋</span></div>
-        <div class="prow"><span>Right ⌘ Command</span><span class="field">⎋</span></div>
-        <div class="disclose">▸ Six other modifiers</div>
-        <hr>
-        <div class="prow">
-          <span>Hold threshold</span>
-          <span class="slider"><span class="track"></span>150 ms</span>
-        </div>
-        <hr>
-        <div class="prow"><span>Launch at login</span><span class="switch"></span></div>
-        <div class="prow"><span>Show menu bar item</span><span class="switch"></span></div>
+      <!-- The wrapper is the layout box, sized to the panel itself; the image inside overhangs it
+           on every side by exactly its shadow. -->
+      <div class="panel-frame">
+      <img class="panel" src="panel.png" width="466" height="615"
+           alt="Momentary's menu bar panel, opened out: a row for each of ⌃ ⌥ ⇧ ⌘ with the left and
+                right side listed separately, both Command rows sending ⎋ and the rest empty; a hold
+                threshold of 150 ms; Exclude App…; and switches for the menu bar item, launching at
+                login and automatic updates.">
       </div>
 
       <dl class="pairs">
