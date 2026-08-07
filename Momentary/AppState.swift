@@ -189,6 +189,16 @@ final class AppState: ObservableObject {
         static let didOfferLaunchAtLogin = "didOfferLaunchAtLogin"
     }
 
+    /// Taken for the whole life of the process and never ended. Without it, an app showing nothing
+    /// at all — menu bar item off, window closed — is a candidate for App Nap, which throttles the
+    /// main run loop. That is the run loop the event tap's source and both polls are scheduled on,
+    /// so key presses stop arriving and every rule quietly stops firing, with no icon left to look
+    /// wrong and no window to say so. `AllowingIdleSystemSleep` because watching for a modifier is
+    /// no reason to keep a Mac awake.
+    private let activity = ProcessInfo.processInfo.beginActivity(
+        options: .userInitiatedAllowingIdleSystemSleep,
+        reason: "Watching for modifier keys held and tapped")
+
     private let defaults = UserDefaults.standard
     private let tap = ModifierTap()
     private var frontmostBundleID: String?
